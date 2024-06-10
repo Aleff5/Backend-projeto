@@ -13,20 +13,16 @@ func reAlu(c *gin.Context) {
 func Loading() {
 
 	r := gin.Default()
-	r.GET("/", reAlu)
+
+	r.GET("/", Home)
+	r.POST("/login", Login)
+	r.POST("/signup", Singup)
+	r.GET("/admin", AdminView)
 
 	r.Run()
-
 	// r := mux.NewRouter()
-	// r.HandleFunc("/", Home)
-	// r.HandleFunc("/login", Login).Methods("POST")
 
-	// r.HandleFunc("/signup", Singup).Methods("POST")
-	// r.HandleFunc("/admin", AdminView).Methods("GET")
-	// r.HandleFunc("/upload", Upload).Methods("POST")
-	// r.HandleFunc("/generate", GenerateImage).Methods("GET")
-
-	// // Adicione suporte a CORS
+	// Adicione suporte a CORS
 	// headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	// methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
 	// origins := handlers.AllowedOrigins([]string{"*"})
