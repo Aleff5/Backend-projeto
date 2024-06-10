@@ -13,6 +13,7 @@ import (
 	"projeto/models"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -22,14 +23,15 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Message)
 }
 
-func Login(w http.ResponseWriter, r *http.Request) {
+func Login(c *gin.Context) {
 	client := ConnectBd()
 	defer client.Disconnect(context.Background())
 
 	var usuarioLogin models.Usuario
-	err := json.NewDecoder(r.Body).Decode(&usuarioLogin)
+	err := c.ShouldBindBodyWithJSON(usuarioLogin)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
 		return
 	}
 
@@ -42,20 +44,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	resultadoBusca := models.Usuario{}
 	erroNaBusca := collection.FindOne(context.Background(), filter).Decode(&resultadoBusca)
 	if erroNaBusca != nil {
-		http.Error(w, "User not found", http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode("Welcome, " + resultadoBusca.Username)
+	c.JSON(http.StatusOK, "Welcome, "+resultadoBusca.Username)
 }
 
-func Singup(w http.ResponseWriter, r *http.Request) {
+func Singup(c *gin.Context) {
 	var novoUsuario models.Usuario
-	err := json.NewDecoder(r.Body).Decode(&novoUsuario)
+	err := c.ShouldBindBodyWithJSON(novoUsuario)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
 		return
 	}
 
@@ -65,13 +67,15 @@ func Singup(w http.ResponseWriter, r *http.Request) {
 	result, err := collection.InsertOne(context.Background(), novoUsuario)
 	if err != nil {
 		log.Printf("Failed to create user: %v\n", err)
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result.InsertedID)
+	// w.Header().Set("Content-Type", "application/json")
+	// w.WriteHeader(http.StatusOK)
+	c.JSON(http.StatusOK, result.InsertedID)
+
 }
 
 func AdminView(w http.ResponseWriter, r *http.Request) {
