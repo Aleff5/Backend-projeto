@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	database "projetov2/Backend-projeto/Database"
 	"projetov2/Backend-projeto/models"
 	"projetov2/Backend-projeto/utility"
 	"time"
@@ -67,12 +67,9 @@ func Singup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := ConnectBd()
-	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
+	result, err := database.InsertOne(novoUsuario)
 
-	result, err := collection.InsertOne(context.Background(), novoUsuario)
 	if err != nil {
-		log.Printf("Failed to create user: %v\n", err)
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
