@@ -39,12 +39,12 @@ func Login(c *gin.Context) {
 	erroNaBusca := collection.FindOne(context.Background(), filter).Decode(&resultadoBusca)
 	if erroNaBusca != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": err.Error()})
+			"error": erroNaBusca.Error()})
 		return
 	}
 	expirationTime := time.Now().Add(time.Minute * 5)
-	claims := models.Claims{
-		Username: usuarioLogin.Username,
+	claims := &models.Claims{
+		Username: resultadoBusca.Username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -63,6 +63,17 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, "Welcome, "+resultadoBusca.Username)
 }
 
+//	func UserZone(c *gin.Context) {
+//		cookie, err := c.Cookie("token")
+//		if err != nil {
+//			if err == http.ErrNoCookie {
+//				c.AbortWithStatus(http.StatusUnauthorized)
+//				return
+//			}
+//			c.AbortWithStatus(http.StatusBadRequest)
+//			return
+//		}
+//	}
 func Singup(c *gin.Context) {
 	var novoUsuario models.Usuario
 	err := c.ShouldBindBodyWithJSON(novoUsuario)
