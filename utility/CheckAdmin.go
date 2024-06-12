@@ -1,7 +1,7 @@
 package utility
 
 import (
-	database "projetov2/Backend-projeto/Database"
+	"projetov2/Backend-projeto/Database"
 	"projetov2/Backend-projeto/models"
 
 	"go.mongodb.org/mongo-driver/bson"
