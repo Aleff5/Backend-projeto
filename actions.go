@@ -18,8 +18,6 @@ func Home(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	client := ConnectBd()
-	defer client.Disconnect(context.Background())
 
 	var usuarioLogin models.Usuario
 	err := json.NewDecoder(r.Body).Decode(&usuarioLogin)
@@ -33,10 +31,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		{"password", usuarioLogin.Password},
 	}
 
-	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
-	resultadoBusca := models.Usuario{}
+	resultadoBusca, erroNaBusca := database.FindOne(filter)
 
-	erroNaBusca := collection.FindOne(context.Background(), filter).Decode(&resultadoBusca)
 	if erroNaBusca != nil {
 		http.Error(w, "User not found", http.StatusUnauthorized)
 		return
@@ -68,7 +64,6 @@ func Singup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := database.InsertOne(novoUsuario)
-
 	if err != nil {
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
@@ -80,32 +75,16 @@ func Singup(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminView(w http.ResponseWriter, r *http.Request) {
-	client := ConnectBd()
+	http.Cookie()
+
+	client := database.ConnectBd()
 	defer client.Disconnect(context.Background())
 
-	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cur, err := collection.Find(ctx, bson.D{})
+	results, err := database.FindAll(client, ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer cur.Close(ctx)
-
-	var results []bson.M
-	for cur.Next(ctx) {
-		var result bson.M
-		err := cur.Decode(&result)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		results = append(results, result)
-	}
-
-	if err := cur.Err(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

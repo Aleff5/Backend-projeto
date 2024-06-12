@@ -16,8 +16,6 @@ func Loading() {
 
 	r.HandleFunc("/signup", Singup).Methods("POST")
 	r.HandleFunc("/admin", AdminView).Methods("GET")
-	r.HandleFunc("/upload", Upload).Methods("POST")
-	r.HandleFunc("/generate", GenerateImage).Methods("GET")
 
 	// Adicione suporte a CORS
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
