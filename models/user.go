@@ -7,3 +7,5 @@ type Usuario struct {
 	Admin    bool   `json:"admin" bson:"admin"`
 	// Id primitive.ObjectID `bson:"_id,omitempty"`
 }
+
+

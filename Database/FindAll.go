@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func FindAll(client *mongo.Client, ctx context.Context) ([]bson.M, error) {
+func FindAllUsers(client *mongo.Client, ctx context.Context) ([]bson.M, error) {
 	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
 
 	cur, err := collection.Find(ctx, bson.D{})
