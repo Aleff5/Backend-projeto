@@ -23,13 +23,7 @@ func Set() *s3.Client {
 	return client
 }
 
-func AwsUpload(client *s3.Client, bucket, filename string) (string, error) {
-	file, openErr := os.Open(filename)
-	if openErr != nil {
-		log.Fatal(openErr)
-		return "", openErr
-	}
-	defer file.Close()
+func UploadObject(client *s3.Client, bucket, filename string, file *os.File) (string, error) {
 
 	uploader := manager.NewUploader(client)
 

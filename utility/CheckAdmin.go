@@ -14,7 +14,7 @@ func CheckAdm(usuario models.Usuario) (bool, error) {
 		{"password", usuario.Password},
 	}
 
-	resultado, err := database.FindOne(filter)
+	resultado, err := database.FindOneUser(filter)
 
 	if err != nil {
 		return false, err

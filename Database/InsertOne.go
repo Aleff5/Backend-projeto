@@ -15,7 +15,10 @@ func InsertOneUser(usuario models.Usuario) (*mongo.InsertOneResult, error) {
 
 }
 
-func InsertOneImage(imagem models.Imagem, filename string) (*mongo.InsertOneResult, error) {
-	clientAws := AWS.Configuration()
+func InsertOneImage(imagem models.Imagem) (*mongo.InsertOneResult, error) {
+	client := ConnectBd()
 
+	collection := client.Database("ProjetoLTP2").Collection("Imagens")
+
+	return collection.InsertOne(context.Background(), imagem)
 }

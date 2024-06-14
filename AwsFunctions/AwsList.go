@@ -1,4 +1,4 @@
-package aws
+package awsfunctions
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func ListObjects(client *s3.Client, bucket string) {
+func ListObjects(client *s3.Client, bucket string) ([]string, error) {
 	// Get the first page of results for ListObjectsV2 for a bucket
 	output, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
 		Bucket: aws.String("my-bucket"),
 	})
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 
 	var conteudo []string
@@ -26,5 +27,5 @@ func ListObjects(client *s3.Client, bucket string) {
 		log.Println(conteudo)
 
 	}
-
+	return conteudo, nil
 }
