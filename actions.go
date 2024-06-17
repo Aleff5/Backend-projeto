@@ -177,13 +177,32 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filename := imagem.Filename
+
 	client := awsfunctions.Set()
 	erroDelete := awsfunctions.DeleteObject(client, "projeto-ltp2", filename)
 	if erroDelete != nil {
 		http.Error(w, "Internal Error", http.StatusInternalServerError)
 	}
 
+	filter := bson.D{
+		{Key: "filename", Value: filename},
+	}
+	errDb := database.DeleteImage(filter)
+	if errDb != nil {
+		http.Error(w, "Internal Error", http.StatusInternalServerError)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(imagem.Filename + " successfully deleted")
+}
+
+func ShowAll(w http.ResponseWriter, r *http.Request) {
+	imagens, err := database.FindAllImages()
+	if err != nil {
+		http.Error(w, "Internal Error", http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(imagens)
 }

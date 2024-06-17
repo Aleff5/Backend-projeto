@@ -35,7 +35,7 @@ func FindAllUsers(client *mongo.Client, ctx context.Context) ([]bson.M, error) {
 
 func FindAllImages() ([]bson.M, error) {
 	client := ConnectBd()
-	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
+	collection := client.Database("ProjetoLTP2").Collection("Imagens")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
