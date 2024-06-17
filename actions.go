@@ -32,8 +32,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.D{
-		{"email", usuarioLogin.Email},
-		{"password", usuarioLogin.Password},
+		{Key: "email", Value: usuarioLogin.Email},
+		{Key: "password", Value: usuarioLogin.Password},
 	}
 
 	resultadoBusca, erroNaBusca := database.FindOneUser(filter)
@@ -163,4 +163,27 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resultado.InsertedID)
+}
+
+func GenerateImage(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func DeleteImage(w http.ResponseWriter, r *http.Request) {
+	var imagem models.Imagem
+	err := json.NewDecoder(r.Body).Decode(&imagem)
+	if err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	filename := imagem.Filename
+	client := awsfunctions.Set()
+	erroDelete := awsfunctions.DeleteObject(client, "projeto-ltp2", filename)
+	if erroDelete != nil {
+		http.Error(w, "Internal Error", http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(imagem.Filename + " successfully deleted")
 }

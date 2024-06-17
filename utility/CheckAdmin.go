@@ -10,8 +10,8 @@ import (
 func CheckAdm(usuario models.Usuario) (bool, error) {
 
 	filter := bson.D{
-		{"email", usuario.Email},
-		{"password", usuario.Password},
+		{Key: "email", Value: usuario.Email},
+		{Key: "password", Value: usuario.Password},
 	}
 
 	resultado, err := database.FindOneUser(filter)
