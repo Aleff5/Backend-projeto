@@ -206,3 +206,10 @@ func ShowAll(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(imagens)
 }
+
+func Teste(w http.ResponseWriter, r *http.Request) {
+	resultado, _ := utility.GenerateRandomImage()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resultado)
+}

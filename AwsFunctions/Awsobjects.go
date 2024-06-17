@@ -27,6 +27,7 @@ func ListObjects(client *s3.Client, bucket string) ([]string, error) {
 		log.Println(conteudo)
 
 	}
+
 	return conteudo, nil
 }
 
