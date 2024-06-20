@@ -19,7 +19,8 @@ func Loading() {
 	r.HandleFunc("/upload", UploadImage).Methods("POST")
 	r.HandleFunc("/delete", DeleteImage).Methods("DELETE")
 	r.HandleFunc("/show", ShowAll).Methods("GET")
-	r.HandleFunc("/teste", Teste).Methods("GETs")
+	r.HandleFunc("/teste", ImageGen).Methods("GET")
+	r.HandleFunc("/teste2", teste).Methods("GET")
 
 	// Adicione suporte a CORS
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})

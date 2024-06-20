@@ -99,26 +99,90 @@ func AdminView(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// func UploadImage(w http.ResponseWriter, r *http.Request) {
+// 	err := r.ParseMultipartForm(10 << 20) // 10 MB
+// 	if err != nil {
+// 		// log.Fatal(err)
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	file, handler, err := r.FormFile("imageFile")
+// 	if err != nil {
+// 		// log.Fatal(err)
+// 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+// 		return
+// 	}
+// 	// defer file.Close()
+
+// 	fileDescription := r.FormValue("description")
+
+// 	tempDir := os.TempDir()
+// 	tempFilePath := filepath.Join(tempDir, handler.Filename)
+
+// 	// Cria o arquivo temporário
+// 	tempFile, err := os.Create(tempFilePath)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	// defer tempFile.Close()
+
+// 	_, err = io.Copy(tempFile, file)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	tempFile, err = os.Open(tempFile.Name())
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	// defer tempFile.Close()
+
+// 	client := awsfunctions.Set()
+
+// 	result, errUpload := awsfunctions.UploadObject(client, "projeto-ltp2", handler.Filename, tempFile)
+// 	if errUpload != nil {
+// 		http.Error(w, errUpload.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	image := models.Imagem{
+// 		Id:          primitive.NewObjectID(),
+// 		Filename:    handler.Filename,
+// 		FileUrl:     result,
+// 		Description: fileDescription,
+// 	}
+
+// 	resultado, err := database.InsertOneImage(image)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	json.NewEncoder(w).Encode(resultado.InsertedID)
+// }
+
 func UploadImage(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20) // 10 MB
 	if err != nil {
-		// log.Fatal(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	file, handler, err := r.FormFile("file")
+	file, handler, err := r.FormFile("imageFile")
 	if err != nil {
-		// log.Fatal(err)
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return
 	}
-	// defer file.Close()
+	defer file.Close()
 
-	fileDescription := r.FormValue("description")
+	fileName := r.FormValue("fileName")
 
 	tempDir := os.TempDir()
-	tempFilePath := filepath.Join(tempDir, handler.Filename)
+	tempFilePath := filepath.Join(tempDir, fileName+filepath.Ext(handler.Filename))
 
 	// Cria o arquivo temporário
 	tempFile, err := os.Create(tempFilePath)
@@ -126,7 +190,7 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// defer tempFile.Close()
+	defer tempFile.Close()
 
 	_, err = io.Copy(tempFile, file)
 	if err != nil {
@@ -134,16 +198,17 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tempFile, err = os.Open(tempFile.Name())
+	// Reabrir o arquivo temporário para fazer upload para o S3
+	tempFile, err = os.Open(tempFilePath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// defer tempFile.Close()
+	defer tempFile.Close()
 
 	client := awsfunctions.Set()
 
-	result, errUpload := awsfunctions.UploadObject(client, "projeto-ltp2", handler.Filename, tempFile)
+	result, errUpload := awsfunctions.UploadObject(client, "projeto-ltp2", fileName+filepath.Ext(handler.Filename), tempFile)
 	if errUpload != nil {
 		http.Error(w, errUpload.Error(), http.StatusInternalServerError)
 		return
@@ -151,9 +216,9 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	image := models.Imagem{
 		Id:          primitive.NewObjectID(),
-		Filename:    handler.Filename,
+		Filename:    fileName + filepath.Ext(handler.Filename),
 		FileUrl:     result,
-		Description: fileDescription,
+		Description: r.FormValue("description"),
 	}
 
 	resultado, err := database.InsertOneImage(image)
@@ -163,10 +228,6 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resultado.InsertedID)
-}
-
-func GenerateImage(w http.ResponseWriter, r *http.Request) {
-
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
@@ -207,8 +268,16 @@ func ShowAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(imagens)
 }
 
-func Teste(w http.ResponseWriter, r *http.Request) {
+func ImageGen(w http.ResponseWriter, r *http.Request) {
 	resultado, _ := utility.GenerateRandomImage()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resultado)
+}
+
+// função de enviar todas as imagens (admin)
+func teste(w http.ResponseWriter, r *http.Request) {
+	resultado, _ := database.FindUrl()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resultado)

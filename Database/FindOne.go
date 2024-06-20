@@ -23,6 +23,19 @@ func FindOneUser(filter primitive.D) (*models.Usuario, error) {
 	return &usuario, nil
 }
 
+func FindOneImage(filter primitive.D) (*models.Imagem, error) {
+	client := ConnectBd()
+	collection := client.Database("ProjetoLTP2").Collection("Imagens")
+
+	var imagem models.Imagem
+	err := collection.FindOne(context.Background(), filter).Decode(&imagem)
+	if err != nil {
+
+		return nil, err
+	}
+	return &imagem, nil
+}
+
 func GetFilenames() ([]string, error) {
 	client := ConnectBd()
 	collection := client.Database("ProjetoLTP2").Collection("Imagens")

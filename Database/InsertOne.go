@@ -12,7 +12,6 @@ func InsertOneUser(usuario models.Usuario) (*mongo.InsertOneResult, error) {
 	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
 
 	return collection.InsertOne(context.Background(), usuario)
-
 }
 
 func InsertOneImage(imagem models.Imagem) (*mongo.InsertOneResult, error) {
