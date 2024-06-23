@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -46,18 +47,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	token, err := utility.GenerateToken(resultadoBusca.Username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	expirationTime := time.Now().Add(time.Minute * 5)
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   token,
-		Expires: expirationTime,
+		Name:     "token",
+		Value:    token,
+		Expires:  expirationTime,
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteDefaultMode,
 	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode("Welcome, " + resultadoBusca.Username)
+
+	log.Println("Cookie 'token' set with value:", token)
 }
 
 func Singup(w http.ResponseWriter, r *http.Request) {
@@ -80,106 +87,88 @@ func Singup(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminView(w http.ResponseWriter, r *http.Request) {
-
 	client := database.ConnectBd()
 	defer client.Disconnect(context.Background())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	results, err := database.FindAllUsers(client, ctx)
+	// Buscar todos os usuários retorna lista de primitive.D
+	users, err := database.FindAllUsers(client, ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(results); err != nil {
+	// Buscar URLs das imagens retorna lista de strings
+	imageUrls, err := database.FindUrl() // Suponha que esta função retorna os URLs das imagens
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	// Criar estrutura para enviar como resposta
+	responseData := map[string]interface{}{
+		"users":      users,
+		"image_urls": imageUrls,
+	}
+
+	// Converter para JSON
+	jsonData, err := json.Marshal(responseData)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Definir o cabeçalho Content-Type e enviar resposta JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonData)
 }
 
-// func UploadImage(w http.ResponseWriter, r *http.Request) {
-// 	err := r.ParseMultipartForm(10 << 20) // 10 MB
-// 	if err != nil {
-// 		// log.Fatal(err)
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
+func Logout(w http.ResponseWriter, r *http.Request) {
+	// Define o cookie com uma data de expiração passada para removê-lo
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour),
+		HttpOnly: true,
+		Secure:   false, // Altere para true se estiver usando HTTPS
+		SameSite: http.SameSiteDefaultMode,
+	})
 
-// 	file, handler, err := r.FormFile("imageFile")
-// 	if err != nil {
-// 		// log.Fatal(err)
-// 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
-// 		return
-// 	}
-// 	// defer file.Close()
-
-// 	fileDescription := r.FormValue("description")
-
-// 	tempDir := os.TempDir()
-// 	tempFilePath := filepath.Join(tempDir, handler.Filename)
-
-// 	// Cria o arquivo temporário
-// 	tempFile, err := os.Create(tempFilePath)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	// defer tempFile.Close()
-
-// 	_, err = io.Copy(tempFile, file)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	tempFile, err = os.Open(tempFile.Name())
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	// defer tempFile.Close()
-
-// 	client := awsfunctions.Set()
-
-// 	result, errUpload := awsfunctions.UploadObject(client, "projeto-ltp2", handler.Filename, tempFile)
-// 	if errUpload != nil {
-// 		http.Error(w, errUpload.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	image := models.Imagem{
-// 		Id:          primitive.NewObjectID(),
-// 		Filename:    handler.Filename,
-// 		FileUrl:     result,
-// 		Description: fileDescription,
-// 	}
-
-// 	resultado, err := database.InsertOneImage(image)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(resultado.InsertedID)
-// }
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Logged out successfully"))
+}
 
 func UploadImage(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20) // 10 MB
 	if err != nil {
+		log.Println("Error parsing form:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	file, handler, err := r.FormFile("imageFile")
 	if err != nil {
+		log.Println("Error getting file from form:", err)
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return
 	}
 	defer file.Close()
 
 	fileName := r.FormValue("fileName")
+	description := r.FormValue("description")
+
+	log.Println("File name:", fileName)            // Log do nome do arquivo
+	log.Println("Description:", description)       // Log da descrição
+	log.Println("File handler:", handler.Filename) // Log do nome original do arquivo
+
+	if fileName == "" || description == "" || handler.Filename == "" {
+		log.Println("Missing form fields")
+		http.Error(w, "Missing form fields", http.StatusBadRequest)
+		return
+	}
 
 	tempDir := os.TempDir()
 	tempFilePath := filepath.Join(tempDir, fileName+filepath.Ext(handler.Filename))
@@ -187,6 +176,7 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 	// Cria o arquivo temporário
 	tempFile, err := os.Create(tempFilePath)
 	if err != nil {
+		log.Println("Error creating temp file:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -194,6 +184,7 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(tempFile, file)
 	if err != nil {
+		log.Println("Error copying file to temp file:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -201,6 +192,7 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 	// Reabrir o arquivo temporário para fazer upload para o S3
 	tempFile, err = os.Open(tempFilePath)
 	if err != nil {
+		log.Println("Error reopening temp file:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -210,6 +202,7 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 
 	result, errUpload := awsfunctions.UploadObject(client, "projeto-ltp2", fileName+filepath.Ext(handler.Filename), tempFile)
 	if errUpload != nil {
+		log.Println("Error uploading to S3:", errUpload)
 		http.Error(w, errUpload.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -218,12 +211,14 @@ func UploadImage(w http.ResponseWriter, r *http.Request) {
 		Id:          primitive.NewObjectID(),
 		Filename:    fileName + filepath.Ext(handler.Filename),
 		FileUrl:     result,
-		Description: r.FormValue("description"),
+		Description: description,
 	}
 
 	resultado, err := database.InsertOneImage(image)
 	if err != nil {
+		log.Println("Error inserting image to database:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -258,21 +253,23 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(imagem.Filename + " successfully deleted")
 }
 
-func ShowAll(w http.ResponseWriter, r *http.Request) {
-	imagens, err := database.FindAllImages()
-	if err != nil {
-		http.Error(w, "Internal Error", http.StatusInternalServerError)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(imagens)
-}
+// func ShowAll(w http.ResponseWriter, r *http.Request) {
+// 	imagens, err := database.FindAllImages()
+// 	if err != nil {
+// 		http.Error(w, "Internal Error", http.StatusInternalServerError)
+// 	}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	json.NewEncoder(w).Encode(imagens)
+// }
 
 func ImageGen(w http.ResponseWriter, r *http.Request) {
-	resultado, _ := utility.GenerateRandomImage()
+	nome, descricao, url, _ := utility.GenerateRandomImage()
+	dados := []string{nome, descricao, url}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resultado)
+	json.NewEncoder(w).Encode(dados)
 }
 
 // função de enviar todas as imagens (admin)

@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func GenerateRandomImage() (string, error) {
+func GenerateRandomImage() (string, string, string, error) {
 	listaDeImagens, _ := database.GetFilenames()
 	randomIndex := rand.Intn(len(listaDeImagens))
 
@@ -18,9 +18,9 @@ func GenerateRandomImage() (string, error) {
 	resultadoBusca, erroNaBusca := database.FindOneImage(filter)
 
 	if erroNaBusca != nil {
-		return "", erroNaBusca
+		return "", "", "", erroNaBusca
 	}
-	return resultadoBusca.FileUrl, nil
+	return resultadoBusca.Filename, resultadoBusca.Description, resultadoBusca.FileUrl, nil
 
 	// input := &s3.GetObjectInput{
 	// 	Bucket: aws.String("projeto-ltp2"),

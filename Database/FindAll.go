@@ -7,12 +7,18 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func FindAllUsers(client *mongo.Client, ctx context.Context) ([]bson.M, error) {
 	collection := client.Database("ProjetoLTP2").Collection("Usuarios")
 
-	cur, err := collection.Find(ctx, bson.D{})
+	projection := bson.D{
+		{"email", 1},
+		{"username", 1},
+	}
+
+	cur, err := collection.Find(ctx, bson.D{}, options.Find().SetProjection(projection))
 	if err != nil {
 		return nil, err
 	}
